@@ -1,13 +1,17 @@
-# FakeStore Shopfront
+# Advanced React E-Commerce Application
 
-An advanced React e-commerce application built as part of the Coding Temple curriculum. It fetches products from the [FakeStore API](https://fakestoreapi.com) and provides a fully interactive shopping experience with a persistent cart.
+A full-stack React e-commerce application built with Firebase and Firestore. Features user authentication, product management, shopping cart, and order tracking with a modern, responsive UI.
 
 ## Features
 
-- **Product Catalog** — Browse all products or filter by category using a dropdown.
+- **User Authentication** — Firebase Authentication with email/password registration and login.
+- **User Profiles** — Create and manage user profiles with address information stored in Firestore.
+- **Product Management** — Create, read, update, and delete products directly in the app (stored in Firestore).
+- **Product Catalog** — Browse all products or filter by category.
 - **Shopping Cart** — Add items, adjust quantities, remove individual items, or clear the entire cart.
-- **Session Persistence** — The cart is saved to `sessionStorage` so it survives page refreshes within the same browser tab.
-- **Checkout Flow** — A simulated checkout clears the cart and displays a confirmation message.
+- **Order Management** — Place orders with shipping addresses, view order history, and track order status.
+- **Account Deletion** — Users can securely delete their accounts and all associated data.
+- **Persistent State** — Cart state managed with Redux and persisted across sessions.
 
 ## Tech Stack
 
@@ -15,24 +19,60 @@ An advanced React e-commerce application built as part of the Coding Temple curr
 |---|---|
 | [React 19](https://react.dev) | UI library |
 | [Vite](https://vitejs.dev) | Build tool & dev server |
-| [Redux Toolkit](https://redux-toolkit.js.org) | Global cart state management |
-| [TanStack React Query](https://tanstack.com/query) | Server-state fetching & caching |
-| [FakeStore API](https://fakestoreapi.com) | Product & category data |
+| [Redux Toolkit](https://redux-toolkit.js.org) | Global state management (cart, auth, products, orders) |
+| [Firebase](https://firebase.google.com) | Authentication & backend |
+| [Cloud Firestore](https://firebase.google.com/products/firestore) | Database for products, users, orders |
 
 ## Project Structure
 
 ```
 src/
 ├── api/
-│   └── fakeStoreApi.js       # Fetch helpers for products and categories
 ├── components/
-│   ├── ProductCard.jsx        # Individual product tile with Add to Cart
-│   ├── ProductCatalog.jsx     # Grid of products with category filter
-│   ├── ProductImage.jsx       # Lazy-loaded product image
-│   └── ShoppingCart.jsx       # Cart sidebar with quantity controls
+│   ├── Auth/
+│   │   ├── LoginForm.jsx
+│   │   ├── RegisterForm.jsx
+│   │   ├── ProtectedRoute.jsx
+│   │   └── AuthGuard.jsx
+│   ├── Orders/
+│   │   ├── OrderHistory.jsx
+│   │   └── OrderDetail.jsx
+│   ├── User/
+│   │   └── UserProfile.jsx
+│   ├── ProductCard.jsx
+│   ├── ProductCatalog.jsx
+│   ├── ShoppingCart.jsx
+│   └── Layouts/
+│       └── MainLayout.jsx
+├── config/
+│   └── firebase.config.js     # Firebase initialization
+├── pages/
+│   ├── HomePage.jsx
+│   ├── LoginPage.jsx
+│   ├── RegisterPage.jsx
+│   ├── DashboardPage.jsx
+│   └── OrdersPage.jsx
+├── services/
+│   └── firebase/
+│       ├── auth.service.js
+│       ├── products.service.js
+│       ├── orders.service.js
+│       ├── users.service.js
+│       └── cart.service.js
 └── store/
-    ├── cartSlice.js           # Redux slice (add, update, remove, clear)
-    └── store.js               # Redux store configuration
+    ├── slices/
+    │   ├── authSlice.js
+    │   ├── cartSlice.js
+    │   ├── productsSlice.js
+    │   ├── ordersSlice.js
+    │   └── userSlice.js
+    ├── hooks/
+    │   ├── useAuth.js
+    │   ├── useCart.js
+    │   ├── useProducts.js
+    │   ├── useOrders.js
+    │   └── useUser.js
+    └── store.js
 ```
 
 ## Getting Started

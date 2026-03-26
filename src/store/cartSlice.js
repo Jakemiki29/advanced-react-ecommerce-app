@@ -23,6 +23,8 @@ function saveCartToSessionStorage(cartItems) {
 
 const initialState = {
   items: loadCartFromSessionStorage(),
+  source: 'session', // 'session' or 'firestore'
+  isLoading: false,
 }
 
 const cartSlice = createSlice({
@@ -42,7 +44,10 @@ const cartSlice = createSlice({
         })
       }
 
-      saveCartToSessionStorage(state.items)
+      // Save to appropriate source
+      if (state.source === 'session') {
+        saveCartToSessionStorage(state.items)
+      }
     },
     updateQuantity: (state, action) => {
       const { id, quantity } = action.payload
@@ -58,21 +63,50 @@ const cartSlice = createSlice({
         item.quantity = quantity
       }
 
-      saveCartToSessionStorage(state.items)
+      // Save to appropriate source
+      if (state.source === 'session') {
+        saveCartToSessionStorage(state.items)
+      }
     },
     removeFromCart: (state, action) => {
       const id = action.payload
       state.items = state.items.filter((item) => item.id !== id)
-      saveCartToSessionStorage(state.items)
+
+      // Save to appropriate source
+      if (state.source === 'session') {
+        saveCartToSessionStorage(state.items)
+      }
     },
     clearCart: (state) => {
       state.items = []
-      saveCartToSessionStorage(state.items)
+
+      // Save to appropriate source
+      if (state.source === 'session') {
+        saveCartToSessionStorage(state.items)
+      }
+    },
+    setCartFromFirestore: (state, action) => {
+      state.items = action.payload
+      state.source = 'firestore'
+    },
+    setCartSource: (state, action) => {
+      state.source = action.payload
+    },
+    setCartLoading: (state, action) => {
+      state.isLoading = action.payload
     },
   },
 })
 
-export const { addToCart, updateQuantity, removeFromCart, clearCart } =
-  cartSlice.actions
+export const {
+  addToCart,
+  updateQuantity,
+  removeFromCart,
+  clearCart,
+  setCartFromFirestore,
+  setCartSource,
+  setCartLoading,
+} = cartSlice.actions
 
 export default cartSlice.reducer
+

@@ -1,27 +1,37 @@
-import { useState } from 'react'
-import ProductCatalog from './components/ProductCatalog'
-import ShoppingCart from './components/ShoppingCart'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import HomePage from './pages/HomePage'
+import DashboardPage from './pages/DashboardPage'
+import OrdersPage from './pages/OrdersPage'
+import OrderDetail from './components/Orders/OrderDetail'
+import ProtectedRoute from './components/Auth/ProtectedRoute'
 import './App.css'
 
 function App() {
-  const [selectedCategory, setSelectedCategory] = useState('all')
-
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <p className="app-header__eyebrow">Advanced React Ecommerce</p>
-        <h1>FakeStore Shopfront</h1>
-      </header>
+    <BrowserRouter>
+      <Routes>
+        {/* Public auth routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
 
-      <main className="app-layout">
-        <ProductCatalog
-          selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
-        />
-        <ShoppingCart />
-      </main>
-    </div>
+        {/* Protected routes - require authentication */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/orders/:orderId" element={<OrderDetail />} />
+        </Route>
+
+        {/* Catch-all - redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
 export default App
+
+
+
