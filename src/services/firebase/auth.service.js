@@ -5,6 +5,8 @@ import {
   onAuthStateChanged,
   sendPasswordResetEmail,
   updateProfile,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../../config/firebase.config'
@@ -125,6 +127,27 @@ export function getCurrentUser() {
       reject,
     )
   })
+}
+
+/**
+ * Re-authenticate the current user with their email and password.
+ * Must be called before sensitive operations such as account deletion
+ * when the user's session may have expired.
+ * @param {string} password - User's current password
+ * @returns {Promise<void>}
+ */
+export async function reauthenticateUser(password) {
+  try {
+    const user = auth.currentUser
+    if (!user || !user.email) {
+      throw new Error('No authenticated user found.')
+    }
+    const credential = EmailAuthProvider.credential(user.email, password)
+    await reauthenticateWithCredential(user, credential)
+  } catch (error) {
+    const friendlyMessage = _getErrorMessage(error.code)
+    throw new Error(friendlyMessage !== 'An error occurred. Please try again.' ? friendlyMessage : error.message)
+  }
 }
 
 /**

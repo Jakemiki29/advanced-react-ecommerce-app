@@ -4,6 +4,7 @@ import { useAuth } from '../../store/hooks/useAuth'
 import { useUser } from '../../store/hooks/useUser'
 import { auth } from '../../config/firebase.config'
 import { deleteUserFromAuth } from '../../services/firebase/users.service'
+import { reauthenticateUser } from '../../services/firebase/auth.service'
 import './UserProfile.css'
 
 function UserProfile() {
@@ -13,6 +14,9 @@ function UserProfile() {
 
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteError, setDeleteError] = useState('')
   const [formData, setFormData] = useState({
     displayName: '',
     phone: '',
@@ -81,12 +85,18 @@ function UserProfile() {
   }
 
   const handleDeleteAccount = async () => {
-    if (!authUser?.uid) {
+    if (!authUser?.uid) return
+
+    setDeleteError('')
+
+    // First click — reveal the password-confirmation form
+    if (!showDeleteConfirm) {
+      setShowDeleteConfirm(true)
       return
     }
 
-    const confirmed = window.confirm('Are you sure you want to delete your account? This action cannot be undone.')
-    if (!confirmed) {
+    if (!deletePassword.trim()) {
+      setDeleteError('Please enter your password to confirm account deletion.')
       return
     }
 
@@ -94,6 +104,9 @@ function UserProfile() {
     setIsDeleting(true)
 
     try {
+      // Re-authenticate before deleting to satisfy Firebase's recency requirement
+      await reauthenticateUser(deletePassword)
+
       const result = await deleteAccount(authUser.uid)
 
       if (!result.payload?.error) {
@@ -101,6 +114,8 @@ function UserProfile() {
         await logout()
         navigate('/register')
       }
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete account. Please check your password and try again.')
     } finally {
       setIsDeleting(false)
     }
@@ -271,9 +286,41 @@ function UserProfile() {
           <div className="danger-zone">
             <h3>Danger Zone</h3>
             <p>Delete your account and remove your profile data from Firestore.</p>
-            <button type="button" onClick={handleDeleteAccount} disabled={isDeleting} className="delete-btn">
-              {isDeleting ? 'Deleting Account...' : 'Delete Account'}
-            </button>
+            {showDeleteConfirm ? (
+              <div className="delete-confirm">
+                <p>Enter your password to confirm. This action cannot be undone.</p>
+                {deleteError && <div className="error-message">{deleteError}</div>}
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Enter your password"
+                  disabled={isDeleting}
+                  className="password-input"
+                />
+                <div className="form-actions">
+                  <button type="button" onClick={handleDeleteAccount} disabled={isDeleting} className="delete-btn">
+                    {isDeleting ? 'Deleting Account...' : 'Confirm Delete'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeleteConfirm(false)
+                      setDeletePassword('')
+                      setDeleteError('')
+                    }}
+                    disabled={isDeleting}
+                    className="cancel-btn"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" onClick={handleDeleteAccount} disabled={isDeleting} className="delete-btn">
+                Delete Account
+              </button>
+            )}
           </div>
         </div>
       )}
