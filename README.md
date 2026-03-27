@@ -2,6 +2,8 @@
 
 A full-stack React e-commerce application built with Firebase and Firestore. Features user authentication, product management, shopping cart, and order tracking with a modern, responsive UI.
 
+Open the application here: https://advanced-react-ecommerce-app.vercel.app/
+
 ## Firestore Security Rules
 
 The file [`firestore.rules`](firestore.rules) at the project root contains the recommended Firestore Security Rules. Deploy them with:
