@@ -2,7 +2,7 @@
 
 A full-stack React e-commerce application built with Firebase and Firestore. Features user authentication, product management, shopping cart, and order tracking with a modern, responsive UI.
 
-Open the application here: https://advanced-react-ecommerce-app.vercel.app/
+**Live app:** https://advanced-react-ecommerce-app.vercel.app
 
 ## Firestore Security Rules
 
@@ -24,21 +24,19 @@ Or paste the contents directly into **Firebase Console → Firestore Database �
 | `products` | Everyone (public catalog) | Admin role only |
 | `categories` | Everyone | Admin role only |
 
-> **Note:** Security rules are enforced server-side by Firestore and cannot be bypassed by client code. They are the only reliable way to restrict data access — client-side checks are for UX only.
-
 ---
 
 ## Required Firestore Composite Indexes
 
 Firestore requires composite indexes for queries that combine equality and inequality filters, or that combine `where` with `orderBy` on different fields. The following indexes must be created in **Firebase Console → Firestore → Indexes** before the queries below will work in production.
 
-| Collection | Fields | Order | Used by |
-|---|---|---|---|
-| `orders` | `userId` ASC, `createdAt` DESC | — | `getUserOrders()` |
-| `orders` | `userId` ASC, `status` ASC, `createdAt` DESC | — | `getFilteredOrders()` with status filter |
-| `products` | `category` ASC, `isActive` ASC | — | `getProductsByCategory()` |
+| Collection | Fields | Used by |
+|---|---|---|
+| `orders` | `userId` ASC, `createdAt` DESC | `getUserOrders()` |
+| `orders` | `userId` ASC, `status` ASC, `createdAt` DESC | `getFilteredOrders()` with status filter |
+| `products` | `category` ASC, `isActive` ASC | `getProductsByCategory()` |
 
-Firebase will print a direct link to create missing indexes in the browser console when a query first fails with a `failed-precondition` error — clicking that link is the fastest way to provision them.
+> When a query fails with `failed-precondition`, Firebase logs a direct link to create the missing index — click it to provision immediately.
 
 ---
 
@@ -59,11 +57,15 @@ Firebase will print a direct link to create missing indexes in the browser conso
 |---|---|
 | [React 19](https://react.dev) | UI library |
 | [Vite](https://vitejs.dev) | Build tool & dev server |
+| [React Router v7](https://reactrouter.com) | Client-side routing |
 | [Redux Toolkit](https://redux-toolkit.js.org) | Global state management (cart, auth, products, orders) |
+| [TanStack Query v5](https://tanstack.com/query) | Server state & data fetching |
 | [Firebase](https://firebase.google.com) | Authentication & backend |
 | [Cloud Firestore](https://firebase.google.com/products/firestore) | Database for products, users, orders |
 | [Vitest](https://vitest.dev) | Test runner (Vite-native) |
 | [React Testing Library](https://testing-library.com/react) | Component rendering & user interaction testing |
+| [GitHub Actions](https://github.com/features/actions) | CI/CD pipeline (test → build → deploy) |
+| [Vercel](https://vercel.com) | Hosting & production deployment |
 
 ## Project Structure
 
@@ -152,16 +154,6 @@ The app will be available at `http://localhost:5173` (or the next available port
 
 The project uses **Vitest** as the test runner and **React Testing Library** for component and interaction testing. All tests run in a `jsdom` environment — no browser or Firebase connection required.
 
-### Running Tests
-
-```bash
-# Watch mode (re-runs on file changes)
-npm test
-
-# Single run — suitable for CI pipelines
-npm run test:run
-```
-
 ### Test Files
 
 ```
@@ -173,40 +165,133 @@ src/components/__tests__/
 
 ### Unit Tests
 
-#### `ProductCard.test.jsx` (4 tests)
-
-Tests the `ProductCard` component in isolation against a lightweight Redux store (cart reducer only, no Firebase middleware).
-
-| Test | What it verifies |
-|---|---|
-| Renders all product information correctly | Title, price, category, description, rating, image, and "Add to cart" button are all present in the DOM |
-| Dispatches `addToCart` on button click | Clicking "Add to cart" updates the Redux store with the correct product and `quantity: 1` |
-| Increments quantity on repeated clicks | Clicking the button twice results in `quantity: 2` — no duplicate entries |
-| Falls back to rating 0 when absent | Products without a `rating` field display `Rate: 0` rather than crashing |
-
-#### `ShoppingCart.test.jsx` (5 tests)
-
-Tests the `ShoppingCart` component in isolation. `useAuth` and `useOrders` are mocked to eliminate Firebase dependencies.
-
-| Test | What it verifies |
-|---|---|
-| Shows empty message with no items | Renders "Your cart is currently empty." and no list element |
-| Renders item details from store | Pre-populated cart item shows title, price, and an input reflecting the current quantity |
-| Displays correct totals | `Total products` and `Total price` match the preloaded cart state |
-| Remove button clears the item | Clicking Remove dispatches `removeFromCart` and reverts to the empty state |
-| Quantity input updates the store | Changing the quantity input dispatches `updateQuantity` with the new value |
+- **`ProductCard.test.jsx`** (4 tests) — renders the card in isolation against a lightweight Redux store; verifies rendering, `addToCart` dispatch, quantity accumulation, and missing-rating fallback.
+- **`ShoppingCart.test.jsx`** (5 tests) — renders the cart in isolation with `useAuth` and `useOrders` mocked; covers empty state, item rendering, totals, remove, and quantity update.
 
 ### Integration Test
 
-#### `CartIntegration.test.jsx` (6 tests)
+- **`CartIntegration.test.jsx`** (6 tests) — renders `ProductCard` and `ShoppingCart` against a single live Redux store with no mocks; simulates add, quantity accumulation, multiple products, and remove flows end-to-end.
 
-Renders `ProductCard` and `ShoppingCart` together sharing a **single live Redux store** — no mocks on the store itself. Simulates full end-to-end user interactions.
+---
 
-| Test | What it verifies |
+## Environment Variables
+
+The app reads Firebase credentials from a `.env.local` file at the project root (never committed to source control). Create it before running the dev server:
+
+```env
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+```
+
+For production, add these same variables in **Vercel → Project → Settings → Environment Variables** (never commit them to source control or `vercel.json`).
+
+---
+
+## Data Migration Script
+
+A one-time seeding script (`scripts/migrate-fakestore-to-firestore.js`) fetches products from the [FakeStore API](https://fakestoreapi.com) and writes them to Firestore. Run it after setting up your Firebase project:
+
+```bash
+node scripts/migrate-fakestore-to-firestore.js
+```
+
+The script requires `.env.local` to be present with valid Firebase credentials. It:
+- Creates `categories` documents (slugified IDs) using `writeBatch`
+- Creates `products` documents using `addDoc` with duplicate checks
+- Attaches `serverTimestamp()` to all documents
+
+---
+
+## State Management
+
+Redux Toolkit manages all client state. The store is configured in `src/store/store.js` with five slices and two custom middleware functions.
+
+### Slices
+
+| Slice | Key State | Purpose |
+|---|---|---|
+| `auth` | `user`, `isLoading`, `isInitialized` | Firebase Auth session |
+| `user` | `profile`, `lastUpdated` | Firestore user profile document |
+| `cart` | `items[]`, `source`, `isLoading` | Shopping cart (session or Firestore-backed) |
+| `products` | `items[]`, `categories[]`, `selectedCategory` | Product catalog and category filter |
+| `orders` | `items[]`, `selectedOrder`, `filters` | Order history and detail |
+
+### Cart Middleware
+
+Two middleware functions in `src/store/middleware/cartMiddleware.js` handle cart persistence transparently:
+
+- **`cartSyncMiddleware`** — on `login.fulfilled` / `register.fulfilled`, loads the user's Firestore cart into the store; on `logout.fulfilled`, clears the Firestore cart and reverts to session storage.
+- **`cartPersistenceMiddleware`** — after any cart mutation (`addToCart`, `updateQuantity`, `removeFromCart`, `clearCart`) while a user is logged in, automatically writes the updated cart to Firestore.
+
+### Custom Hooks
+
+All slices are exposed through hooks in `src/store/hooks/`: `useAuth`, `useUser`, `useProducts`, `useOrders`.
+
+---
+
+## CI/CD Pipeline
+
+Continuous integration and deployment are handled by GitHub Actions (`.github/workflows/main.yml`). The pipeline triggers automatically on every push to `main`.
+
+### Workflow Jobs
+
+```
+push to main
+    │
+    ▼
+┌─────────────────────────┐
+│   build-and-test        │  ubuntu-latest · Node 20
+│  1. actions/checkout    │
+│  2. npm ci              │
+│  3. npm run test:run    │  ← Vitest (fails build if any test fails)
+│  4. npm run build       │  ← Vite production build
+└────────────┬────────────┘
+             │ (must pass)
+             ▼
+┌─────────────────────────┐
+│   deploy                │
+│  amondnet/vercel-action │  ← deploys to production
+└─────────────────────────┘
+```
+
+The `deploy` job only runs if `build-and-test` passes — a failing test or broken build blocks the deployment.
+
+### Required GitHub Secrets
+
+Add these in **GitHub → Repository → Settings → Secrets and variables → Actions**:
+
+| Secret | Where to find it |
 |---|---|
-| Empty cart on initial load | Cart shows empty message before any interaction |
-| Add product → cart updates | Clicking "Add to cart" causes the item to appear immediately in `ShoppingCart` |
-| Total price after one add | Summary shows the correct unit price |
-| Multiple clicks accumulate quantity | Clicking "Add to cart" three times results in `quantity: 3` and the correct total |
-| Two different products both appear | Each product gets its own cart entry; total count is 2 |
-| Remove via cart clears the item | Clicking Remove in the cart removes the entry and restores the empty message |
+| `VERCEL_TOKEN` | Vercel → Account Settings → Tokens |
+| `VERCEL_ORG_ID` | Vercel → Team/Account Settings → General |
+| `VERCEL_PROJECT_ID` | Vercel → Project → Settings → General |
+
+> Firebase credentials do **not** need to be in GitHub Secrets — Vercel injects them at build time from its own Environment Variables store.
+
+---
+
+## Vercel Deployment
+
+The app is deployed to Vercel and configured via `vercel.json` at the project root.
+
+### SPA Routing
+
+`vercel.json` contains a single rewrite rule that redirects all routes to `index.html`, enabling React Router's client-side routing without 404s on direct URL access or refresh:
+
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+### Manual Deployment
+
+```bash
+npm install -g vercel
+vercel        # preview
+vercel --prod # production
+```
