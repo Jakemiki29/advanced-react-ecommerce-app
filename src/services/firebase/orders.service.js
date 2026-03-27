@@ -70,6 +70,16 @@ export async function getUserOrders(userId) {
 
     return orders
   } catch (error) {
+    // Composite index error: orders require an index on (userId ASC, createdAt DESC).
+    // Create it in Firebase Console > Firestore > Indexes, or follow the link in
+    // the browser console when this query first fails.
+    if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+      throw new Error(
+        'Unable to fetch orders: a required Firestore composite index is missing. ' +
+          'Open the Firebase Console > Firestore > Indexes and create an index on ' +
+          'the \'orders\' collection for fields: userId (Ascending), createdAt (Descending).',
+      )
+    }
     throw new Error(`Failed to fetch orders: ${error.message}`)
   }
 }
@@ -178,6 +188,14 @@ export async function getFilteredOrders(userId, filters = {}) {
 
     return orders
   } catch (error) {
+    if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+      throw new Error(
+        'Unable to fetch filtered orders: a required Firestore composite index is missing. ' +
+          'Open the Firebase Console > Firestore > Indexes and create an index on ' +
+          'the \'orders\' collection for fields: userId (Ascending), status (Ascending), ' +
+          'createdAt (Descending).',
+      )
+    }
     throw new Error(`Failed to fetch filtered orders: ${error.message}`)
   }
 }

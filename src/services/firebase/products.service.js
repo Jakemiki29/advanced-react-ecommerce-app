@@ -73,6 +73,17 @@ export async function getProductsByCategory(category) {
 
     return products
   } catch (error) {
+    // The inequality filter on 'isActive' combined with the equality filter on
+    // 'category' requires a composite index in Firestore.
+    // Create it in Firebase Console > Firestore > Indexes:
+    //   Collection: products | Fields: category (Ascending), isActive (Ascending)
+    if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+      throw new Error(
+        'Unable to fetch products by category: a required Firestore composite index is missing. ' +
+          'Open the Firebase Console > Firestore > Indexes and create an index on ' +
+          "the 'products' collection for fields: category (Ascending), isActive (Ascending).",
+      )
+    }
     throw new Error(`Failed to fetch products: ${error.message}`)
   }
 }
