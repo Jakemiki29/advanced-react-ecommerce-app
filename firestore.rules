@@ -1,0 +1,72 @@
+rules_version = '2';
+
+// Firestore Security Rules
+// Deploy via: firebase deploy --only firestore:rules
+// Or paste into Firebase Console > Firestore Database > Rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ───────────────────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ─── Users ─────────────────────────────────────────────────────────────────
+    // Each authenticated user may only read or modify their own profile document.
+
+    match /users/{userId} {
+      allow read, update: if isOwner(userId);
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isOwner(userId);
+    }
+
+    // ─── Carts ─────────────────────────────────────────────────────────────────
+    // Cart documents are keyed by userId — full access is scoped to the owner.
+
+    match /carts/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ─── Orders ────────────────────────────────────────────────────────────────
+    // Users may create orders for themselves and read/update their own orders.
+    // Deletion is disallowed for all users to preserve order history.
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated()
+                    && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated()
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // ─── Products ──────────────────────────────────────────────────────────────
+    // Products are publicly readable. Only admins may create, update, or delete
+    // product documents.
+
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ─── Categories ────────────────────────────────────────────────────────────
+    // Categories are publicly readable. Only admins may modify them.
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
