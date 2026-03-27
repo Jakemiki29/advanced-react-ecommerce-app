@@ -40,8 +40,10 @@ export async function getCartFromFirestore(userId) {
 
     const cartData = cartDoc.data()
 
-    // Check if cart has expired
-    if (cartData.expiresAt && new Date() > new Date(cartData.expiresAt)) {
+    // Check if cart has expired.
+    // Firestore stores the Date as a Timestamp; use .toDate() for safe conversion.
+    const expiresAt = cartData.expiresAt?.toDate?.() ?? new Date(cartData.expiresAt)
+    if (expiresAt && new Date() > expiresAt) {
       // Delete expired cart
       await deleteCartFromFirestore(userId)
       return null
