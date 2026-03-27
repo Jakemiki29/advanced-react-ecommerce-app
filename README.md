@@ -2,6 +2,44 @@
 
 A full-stack React e-commerce application built with Firebase and Firestore. Features user authentication, product management, shopping cart, and order tracking with a modern, responsive UI.
 
+## Firestore Security Rules
+
+The file [`firestore.rules`](firestore.rules) at the project root contains the recommended Firestore Security Rules. Deploy them with:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+Or paste the contents directly into **Firebase Console → Firestore Database → Rules**.
+
+### What the rules enforce
+
+| Collection | Who can read | Who can write |
+|---|---|---|
+| `users/{userId}` | Owner only | Owner only (create requires matching UID) |
+| `carts/{userId}` | Owner only | Owner only |
+| `orders/{orderId}` | Owner only (matched by `userId` field) | Owner only; deletion is disallowed |
+| `products` | Everyone (public catalog) | Admin role only |
+| `categories` | Everyone | Admin role only |
+
+> **Note:** Security rules are enforced server-side by Firestore and cannot be bypassed by client code. They are the only reliable way to restrict data access — client-side checks are for UX only.
+
+---
+
+## Required Firestore Composite Indexes
+
+Firestore requires composite indexes for queries that combine equality and inequality filters, or that combine `where` with `orderBy` on different fields. The following indexes must be created in **Firebase Console → Firestore → Indexes** before the queries below will work in production.
+
+| Collection | Fields | Order | Used by |
+|---|---|---|---|
+| `orders` | `userId` ASC, `createdAt` DESC | — | `getUserOrders()` |
+| `orders` | `userId` ASC, `status` ASC, `createdAt` DESC | — | `getFilteredOrders()` with status filter |
+| `products` | `category` ASC, `isActive` ASC | — | `getProductsByCategory()` |
+
+Firebase will print a direct link to create missing indexes in the browser console when a query first fails with a `failed-precondition` error — clicking that link is the fastest way to provision them.
+
+---
+
 ## Features
 
 - **User Authentication** — Firebase Authentication with email/password registration and login.
